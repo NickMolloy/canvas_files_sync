@@ -107,7 +107,6 @@ def get_folders(session):
         else:
             # Is a course resource
             url = base_url + "courses/" + match.group(3) + "/folders/root"
-            #url = base_url + "folders/" + match.group(3) + "/folders"
         recurse_folder(session, url, item['name'])
 
 
@@ -121,14 +120,12 @@ def recurse_folder(session, folder_url, prefix):
     response_json = json.loads(response_cleaned)
     try:
         files_url = response_json['files_url']
-        #print("Files url: " + files_url)
         process_files(session, files_url, prefix)
     except KeyError:
         # Folder has no files in it
         pass
     try:
         folders_url = response_json['folders_url']
-        #print("Folders url: " + folders_url)
         response = session.get(folders_url, verify=True)
         response_cleaned = response.text.split(';', 1)[1]
         response_json = json.loads(response_cleaned)
