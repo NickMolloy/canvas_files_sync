@@ -65,6 +65,7 @@ def get_cookies():
 
 def get_folders(session):
     """Retrieve the list of top level folders available to the user on canvas"""
+    # TODO is this header necessary?
     header = {
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
         "Accept-Encoding": "gzip, deflate, sdch",
@@ -73,7 +74,6 @@ def get_folders(session):
         "Connection": "keep-alive",
         "Host": "canvas.auckland.ac.nz",
         "Pragma": "no-cache",
-        "Referer": "https://canvas.auckland.ac.nz/files/folder/user_43529",
         "Upgrade-Insecure-Requests": "1",
         "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/48.0.2564.116 Chrome/48.0.2564.116 Safari/537.36"
     }
@@ -129,7 +129,7 @@ def recurse_folder(session, folder_url, prefix):
         response_json = json.loads(response_cleaned)
         for item in response_json:
             name = item['name']
-            url = item['folders_url'][:-7]
+            url = os.path.dirname(item['folders_url'][:-7])
             recurse_folder(session, url, os.path.join(prefix, name))
     except KeyError:
         # Folder has no folders in it
