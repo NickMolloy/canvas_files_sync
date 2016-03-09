@@ -9,6 +9,7 @@ import json
 import os.path
 import urllib
 import sys
+from http.cookiejar import LWPCookieJar
 
 FILES = list()
 
@@ -16,12 +17,14 @@ def authenticate(username, pasword):
     """Use the username and password to authenticate to auckland university canvas, and return
     a requests session object with all needed cookies
     """
+    # TODO check http response code for each request
     # Try to load existing session from disk
     session = get_cookies()
     if session:
         return session
     # Create session
     session = requests.Session()
+    session.cookies = LWPCookieJar('.cookiejar')
     # Make initial request to canvas
     response = session.get("https://canvas.auckland.ac.nz", allow_redirects=True, verify=True)
     response = session.get("https://iam.auckland.ac.nz/Authn/UserPassword", allow_redirects=True, verify=True)
@@ -42,25 +45,21 @@ def authenticate(username, pasword):
     }
     response = session.post("https://canvas.auckland.ac.nz/saml_consume", data=form_data, allow_redirects=True, verify=True)
     response = session.get("https://iam.auckland.ac.nz/profile/SAML2/Redirect/SSO", allow_redirects=True, verify=True)
-    save_cookies(session)
+    # Save the cookies to disk
+    session.cookies.save(ignore_discard=True)
     return session
-
-
-def save_cookies(session):
-    """Take a requests session and save the cookie jar from it to disk"""
-    with open('.cookiejar', 'wb') as f:
-        pickle.dump(requests.utils.dict_from_cookiejar(session.cookies), f)
 
 
 def get_cookies():
     """Retrieve cookie jar from disk if it exists and return a session containing it, else return none"""
-    try:
-        with open('.cookiejar', 'rb') as f:
-            cookies = requests.utils.cookiejar_from_dict(pickle.load(f))
-            session = requests.Session()
-            session.cookies = cookies
-            return session
-    except OSError:
+    # TODO check expiration of cookies
+    session = requests.Session()
+    session.cookies = LWPCookieJar('.cookiejar')
+    if os.path.exists('.cookiejar'):
+        # Load cookies, including ones with the discard flag
+        session.cookies.load(ignore_discard=True)
+        return session
+    else:
         return None
 
 
@@ -103,7 +102,7 @@ def get_folders(session):
                 url = base_url + "users/" + match.group(3) + "/folders/root"
             else:
                 # Neither a user nor course
-                print("Unknown resource type, skipping")
+                print("Unknown resource type '%s', skipping" % str(item['asset_string']))
                 continue
         else:
             # Is a course resource
