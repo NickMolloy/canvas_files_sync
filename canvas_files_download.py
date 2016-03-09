@@ -91,23 +91,21 @@ def get_folders(session):
         print("Processing %s" % item['name'])
         base_url = "https://canvas.auckland.ac.nz/api/v1/"
         url = None
-        user_pattern = re.compile('(user)(_)([0-9]*)')
-        course_pattern = re.compile('(course)(_)([0-9]*)')
-        match = course_pattern.match(item['asset_string'])
-        if not match:
-            # Probably a user
-            match = user_pattern.match(item['asset_string'])
+        patterns = {
+            "user": re.compile('(user)(_)([0-9]*)'),
+            "course": re.compile('(course)(_)([0-9]*)'),
+            "group": re.compile('(group)(_)([0-9]*)')
+        }
+        for storage_type in patterns.keys():
+            match = patterns[storage_type].match(item['asset_string'])
             if match:
-                # Is a user resource
-                url = base_url + "users/" + match.group(3) + "/folders/root"
-            else:
-                # Neither a user nor course
-                print("Unknown resource type '%s', skipping" % str(item['asset_string']))
-                continue
+                identifier = match.group(3)
+                url = base_url + storage_type + "s/" + identifier + "/folders/root"
+                recurse_folder(session, url, item['name'])
+                break
         else:
-            # Is a course resource
-            url = base_url + "courses/" + match.group(3) + "/folders/root"
-        recurse_folder(session, url, item['name'])
+            # Didn't match known resource type
+            print("Unknown resource type '%s', skipping" % str(item['asset_string']))
 
 
 def recurse_folder(session, folder_url, prefix):
