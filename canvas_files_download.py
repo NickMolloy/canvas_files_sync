@@ -96,20 +96,21 @@ def process_files(session, files_url, folder_prefix):
         FILES.append((url, cannonical))
 
 
-def download_files(session):
+def download_files(session, verbose):
     """Download files in list to the corresponding location"""
     for item in FILES:
         url = item[0]
         filename = item[1]
-        util.download(session, url, filename)
+        util.download(session, url, filename, verbose=verbose)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Retrieve all your files from University of Auckland Canvas')
     parser.add_argument('username', help='Canvas username')
     parser.add_argument('password', help='Canvas password')
+    parser.add_argument('--show-existing', action='store_true', help='List files found on Canvas even if they exist on disk')
     args = parser.parse_args()
     session = auckland_auth.authenticate("https://canvas.auckland.ac.nz", args.username, args.password)
     get_folders(session)
-    download_files(session)
+    download_files(session, args.show_existing)
     print("All files have been retrieved")
 

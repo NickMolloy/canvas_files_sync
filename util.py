@@ -2,7 +2,7 @@ import urllib
 import os
 import sys
 
-def download(session, url, output_location=None):
+def download(session, url, output_location=None, verbose=False):
     """Download file at url, and save it to ouput_location"""
     # TODO, if file already exists on disk, check file length, and do something if it doesnt match http response
     if not output_location:
@@ -11,7 +11,8 @@ def download(session, url, output_location=None):
     filename = os.path.basename(output_location)
     # Check if file already exists on disk
     if os.path.exists(output_location):
-        print("%s already exists on disk" % output_location)
+        if verbose:
+            print("%s already exists on disk" % output_location)
         return
     # Make needed directory
     os.makedirs(os.path.dirname(output_location), exist_ok=True)
