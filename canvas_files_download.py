@@ -50,7 +50,7 @@ def get_folders(session):
             if match:
                 identifier = match.group(3)
                 url = base_url + storage_type + "s/" + identifier + "/folders/root"
-                recurse_folder(session, url, item['name'])
+                recurse_folder(session, url, clean(item['name']))
                 break
         else:
             # Didn't match known resource type
@@ -84,19 +84,19 @@ def recurse_folder(session, folder_url, prefix):
         for item in response_json:
             name = item['name']
             url = os.path.dirname(item['folders_url'][:-7])
-            recurse_folder(session, url, os.path.join(prefix, name))
+            recurse_folder(session, url, os.path.join(prefix, clean(name)))
     except KeyError:
         # Folder has no folders in it
         pass
 
 
 def process_files(session, files_url, folder_prefix):
-    """Retrieve the file listing and contruct canonical file paths for each file"""
+    """Retrieve the file listing and construct canonical file paths for each file"""
     response = session.get(files_url, verify=True)
     response_cleaned = response.text.split(';', 1)[1]
     response_json = json.loads(response_cleaned)
     for item in response_json:
-        cannonical = os.path.join(folder_prefix, item['display_name'])
+        cannonical = os.path.join(folder_prefix, clean(item['display_name']))
         url = item['url']
         FILES.append((url, cannonical))
 
@@ -110,6 +110,12 @@ def download_files(session, verbose):
             print("There is no url available for '%s', so cannot download it" % filename)
             continue
         util.download(session, url, filename, verbose=verbose)
+
+def clean(string):
+    """Clean a file or folder name of characters that are not allowed"""
+    pre = string
+    string = re.sub('[^\w\-_\.(): ]', '_', string)
+    return string
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Retrieve all your files from University of Auckland Canvas')
