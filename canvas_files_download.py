@@ -59,6 +59,7 @@ def get_folders(session):
 
 def recurse_folder(session, folder_url, prefix):
     """Recursively process contents of folder"""
+    # TODO handle case where foldername has invalid characters (e.g path seperators such as / for *nix systems)
     response = session.get(folder_url, verify=True)
     if response.status_code != 200:
         print("HTTP" + str(response.status_code) + " failed to get folder listing: " + response.text)
@@ -67,6 +68,10 @@ def recurse_folder(session, folder_url, prefix):
     response_json = json.loads(response_cleaned)
     try:
         files_url = response_json['files_url']
+        files_count = response_json['files_count']
+        # TODO seems there is a limit of 100 items per page. Need to introduce pagination supprt
+        if files_count > 0:
+            files_url += "?per_page=%d" % files_count
         process_files(session, files_url, prefix)
     except KeyError:
         # Folder has no files in it
@@ -91,7 +96,7 @@ def process_files(session, files_url, folder_prefix):
     response_cleaned = response.text.split(';', 1)[1]
     response_json = json.loads(response_cleaned)
     for item in response_json:
-        cannonical = os.path.join(folder_prefix,item['display_name'])
+        cannonical = os.path.join(folder_prefix, item['display_name'])
         url = item['url']
         FILES.append((url, cannonical))
 
@@ -101,6 +106,9 @@ def download_files(session, verbose):
     for item in FILES:
         url = item[0]
         filename = item[1]
+        if not url:
+            print("There is no url available for '%s', so cannot download it" % filename)
+            continue
         util.download(session, url, filename, verbose=verbose)
 
 if __name__ == "__main__":
