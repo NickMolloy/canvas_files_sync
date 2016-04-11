@@ -9,6 +9,8 @@ import sys
 from http.cookiejar import LWPCookieJar
 import auckland_auth
 import util
+import threading
+import multiprocessing
 
 FILES = list()
 
@@ -36,6 +38,7 @@ def get_folders(session):
         print("Regex failed")
     # TODO handle files in root directory (does canvas even allow this?)
     # Iterate through dictionary
+    jobs = list()
     for item in json_files['FILES_CONTEXTS']:
         print("Processing %s" % item['name'])
         base_url = "https://canvas.auckland.ac.nz/api/v1/"
@@ -50,11 +53,15 @@ def get_folders(session):
             if match:
                 identifier = match.group(3)
                 url = base_url + storage_type + "s/" + identifier + "/folders/root"
-                recurse_folder(session, url, clean(item['name']))
+                thread = threading.Thread(target=recurse_folder, args=( session, url, clean(item['name']) ) )
+                thread.start()
+                jobs.append(thread)
                 break
         else:
             # Didn't match known resource type
             print("Unknown resource type '%s', skipping" % str(item['asset_string']))
+    for job in jobs:
+        job.join()
 
 
 def recurse_folder(session, folder_url, prefix):
@@ -98,18 +105,42 @@ def process_files(session, files_url, folder_prefix):
     for item in response_json:
         cannonical = os.path.join(folder_prefix, clean(item['display_name']))
         url = item['url']
+        # append() is thread-safe
         FILES.append((url, cannonical))
 
 
 def download_files(session, verbose):
     """Download files in list to the corresponding location"""
-    for item in FILES:
+    print("Starting download")
+    jobs = list()
+    core_count = multiprocessing.cpu_count()
+    chunk_size = len(FILES) // core_count
+    remainder = len(FILES) % core_count
+    for i in range(1, core_count+1):
+        start = (i-1)*chunk_size
+        end = i*chunk_size
+        sub_list = FILES[start:end]
+        thread = threading.Thread(target=do_chunk, args=(sub_list, verbose))
+        thread.start()
+        jobs.append(thread)
+    if core_count*chunk_size < len(FILES):
+        sub_list = FILES[core_count*chunk_size:]
+        thread = threading.Thread(target=do_chunk, args=(sub_list, verbose))
+        thread.start()
+        jobs.append(thread)
+    for job in jobs:
+        job.join()
+
+def do_chunk(file_list, verbose):
+    for item in file_list:
         url = item[0]
         filename = item[1]
         if not url:
             print("There is no url available for '%s', so cannot download it" % filename)
             continue
         util.download(session, url, filename, verbose=verbose)
+
+
 
 def clean(string):
     """Clean a file or folder name of characters that are not allowed"""
