@@ -2,12 +2,14 @@ import urllib
 import os
 import sys
 
-def download(session, url, output_location=None, verbose=False):
+def download(session, url, output_location=None, filename=None, verbose=False):
     """Download file at url, and save it to ouput_location"""
     # TODO, if file already exists on disk, check file length, and do something if it doesnt match http response
+    if not filename:
+        filename = os.path.basename(url)
     if not output_location:
         # No output location given, so save file to current directory
-        output_location = os.path.join(os.getcwd(), os.path.basename(url))
+        output_location = os.path.join(os.getcwd(), filename)
     filename = os.path.basename(output_location)
     # Check if file already exists on disk
     if os.path.exists(output_location):
@@ -20,10 +22,10 @@ def download(session, url, output_location=None, verbose=False):
     response = session.get(url, stream=True, verify=True)
     total_length = int(response.headers.get('content-length'))
     progress = 0
-    print("Downloading: " + filename)
+    print("Downloading: " + output_location)
     try:
         with open(output_location, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=20480): 
+            for chunk in response.iter_content(chunk_size=204800):
                 if chunk: # filter out keep-alive new chunks
                     progress += len(chunk)
                     f.write(chunk)
