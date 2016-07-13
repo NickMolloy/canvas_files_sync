@@ -4,6 +4,8 @@ import os
 from http.cookiejar import LWPCookieJar
 from urllib.parse import urlparse
 
+certs_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cert_bundle")
+
 def authenticate(url, username, pasword):
     """Use the username and password to authenticate to auckland university, and return
     a requests session object with all needed cookies
@@ -14,7 +16,7 @@ def authenticate(url, username, pasword):
     session = get_cookies(cookie_file)
     if session:
         # Check if cookies are valid
-        r = session.head(url, verify=True)
+        r = session.head(url, verify=certs_file)
         if r.status_code == 200:
             print("Cookies from %s are ok" % cookie_file)
             return session
@@ -22,15 +24,15 @@ def authenticate(url, username, pasword):
     session = requests.Session()
     session.cookies = LWPCookieJar(cookie_file)
     # Make initial request to canvas
-    response = session.get(url, allow_redirects=True, verify=True)
-    response = session.get("https://iam.auckland.ac.nz/Authn/UserPassword", allow_redirects=True, verify=True)
+    response = session.get(url, allow_redirects=True, verify=certs_file)
+    response = session.get("https://iam.auckland.ac.nz/Authn/UserPassword", allow_redirects=True, verify=certs_file)
     # Send credentials
     form_data = {
         'submitted': '1',
         'j_username': username,
         'j_password': pasword
     }
-    response = session.post("https://iam.auckland.ac.nz/Authn/UserPassword", data=form_data, allow_redirects=True, verify=True)
+    response = session.post("https://iam.auckland.ac.nz/Authn/UserPassword", data=form_data, allow_redirects=True, verify=certs_file)
     # Need to parse SamlResponse from response body
     pattern = re.compile('(<input type="hidden" name="SAMLResponse" value=")(.*)(")')
     match = pattern.search(response.text)
@@ -46,7 +48,7 @@ def authenticate(url, username, pasword):
     SAML_post_location = SAML_post_location.replace('&#x2f;', '/')
     SAML_post_location = SAML_post_location.replace('&#x3a;', ':')
     # Post SamlResponse
-    response = session.post(SAML_post_location, data=form_data, allow_redirects=True, verify=True)
+    response = session.post(SAML_post_location, data=form_data, allow_redirects=True, verify=certs_file)
     # Save the cookies to disk
     session.cookies.save(ignore_discard=True)
     return session
