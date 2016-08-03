@@ -16,6 +16,6 @@ filename = ""
 if not args.filename:
     filename = os.path.basename(args.url)
 else:
-    file_name = args.filename[0]
+    filename = args.filename[0]
 session = auckland_auth.authenticate(args.url, args.username, args.password)
 util.download(session, args.url, filename=filename)
