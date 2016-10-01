@@ -25,14 +25,13 @@ def authenticate(url, username, pasword):
     session.cookies = LWPCookieJar(cookie_file)
     # Make initial request to canvas
     response = session.get(url, allow_redirects=True, verify=certs_file)
-    response = session.get("https://iam.auckland.ac.nz/Authn/UserPassword", allow_redirects=True, verify=certs_file)
     # Send credentials
     form_data = {
-        'submitted': '1',
         'j_username': username,
-        'j_password': pasword
+        'j_password': pasword,
+        '_eventId_proceed': ''
     }
-    response = session.post("https://iam.auckland.ac.nz/Authn/UserPassword", data=form_data, allow_redirects=True, verify=certs_file)
+    response = session.post("https://iam.auckland.ac.nz/profile/SAML2/Redirect/SSO?execution=e1s1", data=form_data, allow_redirects=True, verify=certs_file)
     # Need to parse SamlResponse from response body
     pattern = re.compile('(<input type="hidden" name="SAMLResponse" value=")(.*)(")')
     match = pattern.search(response.text)
